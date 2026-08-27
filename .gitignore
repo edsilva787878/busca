@@ -1,0 +1,6 @@
+# Na pasta /pipe, crie:
+echo "secrets/" >> .gitignore
+echo "*.pem" >> .gitignore
+echo ".terraform/" >> .gitignore
+echo "terraform.tfstate" >> .gitignore
+echo "terraform.tfstate.backup" >> .gitignore
