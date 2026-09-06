@@ -11,7 +11,7 @@ jobs:
 
     steps:
 
-      - name: Checkout
+      - name: Checkout do codigo
         uses: actions/checkout@v4
 
       - name: Configurar credenciais AWS
@@ -22,8 +22,8 @@ jobs:
           aws-region: us-east-1
 
       - name: Login no ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 553267201437.dkr.ecr.us-east-1.amazonaws.com
 
       - name: Build da imagem
         run: |
@@ -33,7 +33,7 @@ jobs:
         run: |
           docker tag busca:latest 553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
 
-      - name: Push para ECR
+      - name: Push para o ECR
         run: |
           docker push 553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
 
@@ -43,23 +43,15 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-
           script: |
 
-            aws ecr get-login-password --region us-east-1 | \
-            docker login \
-            --username AWS \
-            --password-stdin \
-            553267201437.dkr.ecr.us-east-1.amazonaws.com
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 553267201437.dkr.ecr.us-east-1.amazonaws.com
 
-            docker rm -f app-busca || true
+            docker stop app-busca || true
 
-            docker rmi \
-              553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest \
-              || true
+            docker rm app-busca || true
 
-            docker pull \
-              553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
+            docker pull 553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
 
             docker run -d \
               --name app-busca \
