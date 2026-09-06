@@ -1,4 +1,4 @@
-name: Deploy EC2
+name: Deploy EC2 via ECR
 
 on:
   push:
@@ -10,24 +10,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy para EC2
-        uses: appleboy/ssh-action@v1.2.0
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login no ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build da imagem
+        run: |
+          docker build -t busca:latest .
+
+      - name: Tag da imagem
+        run: |
+          docker tag busca:latest 553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
+
+      - name: Push para ECR
+        run: |
+          docker push 553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
+
+      - name: Deploy na EC2
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
           script: |
-            cd ~/busca
 
-            git pull
+            aws ecr get-login-password --region us-east-1 | \
+            docker login \
+            --username AWS \
+            --password-stdin \
+            553267201437.dkr.ecr.us-east-1.amazonaws.com
 
             docker rm -f app-busca || true
 
-            docker build -t busca:v1 .
+            docker rmi \
+              553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest \
+              || true
+
+            docker pull \
+              553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
 
             docker run -d \
               --name app-busca \
               -p 5000:5000 \
-              busca:v1
+              553267201437.dkr.ecr.us-east-1.amazonaws.com/busca:latest
