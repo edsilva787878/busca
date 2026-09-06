@@ -46,6 +46,11 @@ resource "aws_instance" "flask_server" {
   key_name               = "key-server-app"
   user_data              = file("userdata.sh")
 
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
   tags = {
     Name = "flask-server"
   }
